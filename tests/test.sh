@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#set -x
+
 trap "exit 130" INT
 cleanup() { rm -f err noequals*.ini test.ini ltest.ini good.ini example.ini; exit; }
 trap cleanup EXIT
@@ -162,6 +164,19 @@ crudini --set --existing test.ini section1 name2 val 2>/dev/null && fail
 printf '%s\n' 'gname = val2' '' '' '[section1]' 'name = val2' > good.ini
 diff -u test.ini good.ini && ok || fail
 
+# --missing[=param]
+:> test.ini
+crudini --set test.ini '' gname val
+crudini --set --missing test.ini '' gname val2 2>/dev/null && fail
+crudini --set --missing=inval test.ini '' gname val3 2>/dev/null && fail
+crudini --set --missing test.ini '' gname2 val
+crudini --set test.ini section1 name val
+crudini --set --missing test.ini section1 name val2 2>/dev/null && fail
+crudini --set --missing test.ini section1 name2 val 
+printf '%s\n' 'gname = val' 'gname2 = val' '' '' '[section1]' 'name = val' 'name2 = val' > good.ini
+diff -u test.ini good.ini && ok || fail
+
+
 # --existing=section
 :> test.ini
 crudini --set test.ini '' gname val
@@ -172,6 +187,15 @@ crudini --set --existing='section' test.ini section1 name val2
 crudini --set --existing='section' test.ini section1 name2 val 2>/dev/null || fail
 printf '%s\n' 'gname = val2' 'gname2 = val' \
        '' '' '[section1]' 'name = val2' 'name2 = val' > good.ini
+diff -u test.ini good.ini && ok || fail
+
+# --missing=section
+:> test.ini
+crudini --set test.ini '' gname val
+crudini --set --missing='section' test.ini '' gname val2 2>/dev/null && fail
+crudini --set --missing='section' test.ini section1 name val
+crudini --set --missing='section' test.ini section1 name val2 2>/dev/null && fail
+printf '%s\n' 'gname = val' '' '' '[section1]' 'name = val' > good.ini
 diff -u test.ini good.ini && ok || fail
 
 # --get -------------------------------------------------
@@ -315,6 +339,18 @@ printf '%s\n' 'name=val1' '[section1]' 'name=val2' > test.ini
 printf '%s\n' 'name=val1a' '[section1]' 'name=val2a' |
 crudini --merge --existing test.ini || fail
 printf '%s\n' 'name=val1a' '[section1]' 'name=val2a' > good.ini
+diff -u test.ini good.ini && ok || fail
+
+printf '%s\n' 'name=val1' > test.ini
+printf '%s\n' 'name2=val2' |
+crudini --merge --missing test.ini || fail
+printf '%s\n' 'name=val1' 'name2 = val2' > good.ini
+diff -u test.ini good.ini && ok || fail
+
+printf '%s\n' 'name=val1' '[section1]' 'name=val2' > test.ini
+printf '%s\n' 'name2=val1a' '[section1]' 'name2=val2a' |
+crudini --merge --missing test.ini || fail
+printf '%s\n' 'name=val1' 'name2 = val1a' '[section1]' 'name=val2' > good.ini
 diff -u test.ini good.ini && ok || fail
 
 # All input sections merged to a specific section
